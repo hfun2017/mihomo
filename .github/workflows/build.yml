@@ -12,11 +12,13 @@ on:
       - ".github/ISSUE_TEMPLATE/**"
     branches:
       - Alpha
+      - Meta
     tags:
       - "v*"
   pull_request:
     branches:
       - Alpha
+      - Meta
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
   cancel-in-progress: true
