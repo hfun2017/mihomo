@@ -245,12 +245,12 @@ jobs:
         go env
         go build -v -tags "with_gvisor" -trimpath -ldflags "${BUILDTAG} -X 'github.com/metacubex/mihomo/constant.Version=${VERSION}' -X 'github.com/metacubex/mihomo/constant.BuildTime=${BUILDTIME}' -w -s -buildid="
         if [ "${{matrix.jobs.goos}}" = "windows" ]; then
-          cp mihomo.exe mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
-          zip -r mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.zip mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
+          cp mihomo.exe nethelper-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
+          zip -r nethelper-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.zip nethelper-${{matrix.jobs.goos}}-${{matrix.jobs.output}}.exe
         else
-          cp mihomo mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
-          gzip -c mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}} > mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.gz
-          rm mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
+          cp mihomo nethelper-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
+          gzip -c nethelper-${{matrix.jobs.goos}}-${{matrix.jobs.output}} > nethelper-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.gz
+          rm nethelper-${{matrix.jobs.goos}}-${{matrix.jobs.output}}
         fi
 
     - name: Package DEB
@@ -262,9 +262,9 @@ jobs:
 
         fpm -t deb \
           -v "${PackageVersion}" \
-          -p "mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.deb" \
+          -p "nethelper-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.deb" \
           --architecture ${{ matrix.jobs.debian }} \
-          mihomo=/usr/bin/mihomo
+          nethelper=/usr/bin/nethelper
 
     - name: Package RPM
       if: matrix.jobs.rpm != ''
@@ -275,9 +275,9 @@ jobs:
 
         fpm -t rpm \
           -v "${PackageVersion}" \
-          -p "mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.rpm" \
+          -p "nethelper-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.rpm" \
           --architecture ${{ matrix.jobs.rpm }} \
-          mihomo=/usr/bin/mihomo
+          nethelper=/usr/bin/nethelper
 
     - name: Package Pacman
       if: matrix.jobs.pacman != ''
@@ -289,9 +289,9 @@ jobs:
 
         fpm -t pacman \
           -v "${PackageVersion}" \
-          -p "mihomo-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.pkg.tar.zst" \
+          -p "nethelper-${{matrix.jobs.goos}}-${{matrix.jobs.output}}-${VERSION}.pkg.tar.zst" \
           --architecture ${{ matrix.jobs.pacman }} \
-          mihomo=/usr/bin/mihomo
+          nethelper=/usr/bin/nethelper
 
     - name: Pack Golang Toolchain
       if: ${{ matrix.jobs.goversion == '' && matrix.jobs.tarball == 'tarball' }}
@@ -318,11 +318,11 @@ jobs:
       with:
         name: "${{ matrix.jobs.goos }}-${{ matrix.jobs.output }}"
         path: |
-          mihomo*.gz
-          mihomo*.deb
-          mihomo*.rpm
-          mihomo*.pkg.tar.zst
-          mihomo*.zip
+          nethelper*.gz
+          nethelper*.deb
+          nethelper*.rpm
+          nethelper*.pkg.tar.zst
+          nethelper*.zip
           toolchain.tar.gz
           vendor.tar.gz
           version.txt
