@@ -1420,7 +1420,7 @@ proxy-groups:
     url: "https://cp.cloudflare.com/generate_204"
     interval: 300
 
-  # fallback 将按照 url 测试结果按照节点顺序选择
+  # fallback 将从健康节点中随机选择一个作为主节点，失效后重新随机选择
   - name: "fallback-auto"
     type: fallback
     proxies:

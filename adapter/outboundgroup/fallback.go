@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/metacubex/mihomo/common/callback"
@@ -11,6 +12,7 @@ import (
 	"github.com/metacubex/mihomo/common/utils"
 	C "github.com/metacubex/mihomo/constant"
 	P "github.com/metacubex/mihomo/constant/provider"
+	"github.com/metacubex/randv2"
 )
 
 type Fallback struct {
@@ -18,6 +20,9 @@ type Fallback struct {
 	disableUDP     bool
 	testUrl        string
 	selected       string
+	selectedFixed  bool
+	selectedMux    sync.Mutex
+	randomIntN     func(int) int
 	expectedStatus string
 }
 
@@ -87,7 +92,7 @@ func (f *Fallback) MarshalJSON() ([]byte, error) {
 		"all":            all,
 		"testUrl":        f.testUrl,
 		"expectedStatus": f.expectedStatus,
-		"fixed":          f.selected,
+		"fixed":          f.selectedName(),
 		"hidden":         f.Hidden(),
 		"icon":           f.Icon(),
 		"emptyFallback":  f.EmptyFallback().Name(),
@@ -102,23 +107,39 @@ func (f *Fallback) Unwrap(metadata *C.Metadata, touch bool) C.Proxy {
 
 func (f *Fallback) findAliveProxy(touch bool) C.Proxy {
 	proxies := f.GetProxies(touch)
-	for _, proxy := range proxies {
-		if len(f.selected) == 0 {
+
+	f.selectedMux.Lock()
+	defer f.selectedMux.Unlock()
+
+	// Keep the randomly chosen primary (or an API-pinned proxy) until it fails.
+	if f.selected != "" {
+		for _, proxy := range proxies {
+			if proxy.Name() != f.selected {
+				continue
+			}
 			if proxy.AliveForTestUrl(f.testUrl) {
 				return proxy
 			}
-		} else {
-			if proxy.Name() == f.selected {
-				if proxy.AliveForTestUrl(f.testUrl) {
-					return proxy
-				} else {
-					f.selected = ""
-				}
-			}
+			break
+		}
+		f.selected = ""
+		f.selectedFixed = false
+	}
+
+	aliveProxies := make([]C.Proxy, 0, len(proxies))
+	for _, proxy := range proxies {
+		if proxy.AliveForTestUrl(f.testUrl) {
+			aliveProxies = append(aliveProxies, proxy)
 		}
 	}
 
-	return proxies[0]
+	if len(aliveProxies) == 0 {
+		aliveProxies = proxies
+	}
+
+	proxy := aliveProxies[f.randomIntN(len(aliveProxies))]
+	f.selected = proxy.Name()
+	return proxy
 }
 
 func (f *Fallback) Set(name string) error {
@@ -134,7 +155,10 @@ func (f *Fallback) Set(name string) error {
 		return errors.New("proxy not exist")
 	}
 
+	f.selectedMux.Lock()
 	f.selected = name
+	f.selectedFixed = true
+	f.selectedMux.Unlock()
 	if !p.AliveForTestUrl(f.testUrl) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*time.Duration(5000))
 		defer cancel()
@@ -146,7 +170,19 @@ func (f *Fallback) Set(name string) error {
 }
 
 func (f *Fallback) ForceSet(name string) {
+	f.selectedMux.Lock()
+	defer f.selectedMux.Unlock()
 	f.selected = name
+	f.selectedFixed = name != ""
+}
+
+func (f *Fallback) selectedName() string {
+	f.selectedMux.Lock()
+	defer f.selectedMux.Unlock()
+	if !f.selectedFixed {
+		return ""
+	}
+	return f.selected
 }
 
 func (f *Fallback) Providers() []P.ProxyProvider {
@@ -174,6 +210,7 @@ func NewFallback(option *GroupCommonOption, emptyFallback C.Proxy, providers []P
 		}),
 		disableUDP:     option.DisableUDP,
 		testUrl:        option.URL,
+		randomIntN:     randv2.IntN,
 		expectedStatus: option.ExpectedStatus,
 	}
 }
