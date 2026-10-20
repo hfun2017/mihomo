@@ -120,8 +120,12 @@ func newFallbackForTest(t *testing.T, names ...string) (*Fallback, []C.Proxy) {
 	t.Cleanup(func() { _ = proxyProvider.Close() })
 
 	emptyFallback := adapter.NewProxy(outbound.NewCompatible())
-	return NewFallback(&GroupCommonOption{
+	fallback, err := NewFallback(GroupCommonOption{
 		Name: "test-fallback",
 		URL:  fallbackTestURL,
-	}, emptyFallback, []P.ProxyProvider{proxyProvider}), proxies
+	}, FallbackOption{}, emptyFallback, []P.ProxyProvider{proxyProvider})
+	if err != nil {
+		t.Fatalf("create fallback: %v", err)
+	}
+	return fallback, proxies
 }
